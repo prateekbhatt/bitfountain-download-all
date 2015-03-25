@@ -4,7 +4,7 @@ Download all lectures from a [bitfountain](http://bitfountain.io) course!
 
 ## Why?
 
-There are times when we do not have access to the internet (e.g. while travelling), and those are also the periods when we have the most amount of spare time :) I believe many of you like spending those times reading, or watching educational videos. There is no easy way to download all the lectures of a [bitfountain](http://bitfountain.io) course at one go, so that we can watch them later. This program, written in [Go lang](http://golang.org), helps you solve this.
+There are times when we do not have access to the internet (e.g. while travelling), and those are also the periods when we have the most amount of spare time :) I believe many of you like spending those times reading, or watching educational videos. There is no easy way to download all the lectures of a [bitfountain](http://bitfountain.io) course at one go, so that we can watch them later. This program, written in [Go lang](http://golang.org), helps you solve this problem.
 
 ## How?
 
