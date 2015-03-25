@@ -1,20 +1,20 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/kardianos/osext"
 	"io"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"os"
-    "flag"
-	"github.com/kardianos/osext"
 	"path"
 	"path/filepath"
 	"strings"
-    // "crypto/ssh/terminal"
+	// "crypto/ssh/terminal"
 	// "github.com/tobyhede/go-underscore"
 )
 
@@ -40,28 +40,28 @@ func main() {
 	LOGIN_URL := "https://sso.usefedora.com/secure/24/users/sign_in"
 	SCHOOL_ID := "24" // id of bitfountain on usefedora.com
 
-    emailPtr := flag.String("email", "", "Email of the user")
-    passwordPtr := flag.String("pass", "", "Password of the user")
-    flag.Parse()
+	emailPtr := flag.String("email", "", "Email of the user")
+	courseUrlPtr := flag.String("course", "", "URL of the course")
+	passwordPtr := flag.String("pass", "", "Password of the user")
+	flag.Parse()
 
+	if *emailPtr == "" {
+		log.Fatal("Please provide your email address")
+	}
 
-    if *emailPtr == "" {
-        log.Fatal("Please provide your email address")
-    }
+	if *passwordPtr == "" {
+		log.Fatal("Please provide your password")
+	}
 
-    if *passwordPtr == "" {
-        log.Fatal("Please provide your password")
-    }
+	if *courseUrlPtr == "" {
+		log.Fatal("Please provide the bitfountain course url")
+	}
 
-
-
-    // pass, err := terminal.ReadPassword()
-    // if err != nil {
-    //     log.Fatal(err)
-    // }
-    // fmt.Printf("\n\npass:: %s", pass)
-
-	COURSE_URL := "http://bitfountain.io/courses/complete-ios8"
+	// pass, err := terminal.ReadPassword()
+	// if err != nil {
+	//     log.Fatal(err)
+	// }
+	// fmt.Printf("\n\npass:: %s", pass)
 
 	fmt.Println("LOGIN_URL:>", LOGIN_URL)
 
@@ -77,7 +77,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	resp, err := client.Get(COURSE_URL)
+	resp, err := client.Get(*courseUrlPtr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -141,10 +141,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	courseDir := filepath.Join(currentDir, path.Base(COURSE_URL))
+	courseDir := filepath.Join(currentDir, path.Base(*courseUrlPtr))
 
-    // create course directory
-    os.Mkdir(courseDir, 0777)
+	// create course directory
+	os.Mkdir(courseDir, 0777)
 
 	for _, l := range sections {
 		// fmt.Printf("\n\nLesson: %s \n", l.name)
@@ -160,17 +160,16 @@ func main() {
 			lectureId := strings.TrimSpace(v.lectureId)
 			lectureName := fmt.Sprint(getDashedName(v.name), ".mp4")
 
-			lecturePageUrl := COURSE_URL + "/lectures/" + lectureId
+			lecturePageUrl := *courseUrlPtr + "/lectures/" + lectureId
 			fmt.Printf("\n lecturePageUrl:: %s", lecturePageUrl)
 
 			lectureFilePath := filepath.Join(sectionDir, lectureName)
 			fmt.Printf("\n lectureFilePath:: %s", lectureFilePath)
 
-
-            if _, err := os.Stat(lectureFilePath); err == nil {
-                fmt.Printf("file exists; moving to next lecture...")
-                break
-            }
+			if _, err := os.Stat(lectureFilePath); err == nil {
+				fmt.Printf("file exists; moving to next lecture...")
+				break
+			}
 
 			respLecture, err := client.Get(lecturePageUrl)
 			if err != nil {
