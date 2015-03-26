@@ -64,7 +64,7 @@ func main() {
 	// }
 	// fmt.Printf("\n\npass:: %s", pass)
 
-	fmt.Println("LOGIN_URL:>", LOGIN_URL)
+	fmt.Println("Logging in ...")
 
 	client := http.Client{Jar: jar}
 
@@ -77,6 +77,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Println("Logged in. Fetching course sections ...")
 
 	resp, err := client.Get(*courseUrlPtr)
 	if err != nil {
@@ -109,8 +111,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// fmt.Printf("\n\nDoc:: %s", doc)
-
 	sections := []section{}
 
 	doc.Find(".course-section").Each(func(i int, s *goquery.Selection) {
@@ -133,8 +133,6 @@ func main() {
 		}
 		sections = append(sections, newLesson)
 
-		fmt.Printf("\n\n sections: %s", sections)
-		// fmt.Printf("\n\n Lesson Name %d: %s", i+1, name)
 	})
 
 	currentDir, err := osext.ExecutableFolder()
@@ -148,7 +146,9 @@ func main() {
 	os.Mkdir(courseDir, 0777)
 
 	for index, l := range sections {
-		sectionDir := filepath.Join(courseDir, getDashedName(l.name, index))
+
+		sectionDirName := getDashedName(l.name, index)
+		sectionDir := filepath.Join(courseDir, sectionDirName)
 
 		// check if the section dir exists
 		_, err := os.Stat(sectionDir)
@@ -160,20 +160,21 @@ func main() {
 
 		}
 
+		fmt.Printf("\n\n\n%s", sectionDirName)
+
 		for lIndex, v := range l.lectures {
-			fmt.Printf("\n%s :: %s", v.name, v.lectureId)
 
 			lectureId := strings.TrimSpace(v.lectureId)
 			lectureName := fmt.Sprint(getDashedName(v.name, lIndex), ".mp4")
 
 			lecturePageUrl := *courseUrlPtr + "/lectures/" + lectureId
-			fmt.Printf("\n lecturePageUrl:: %s", lecturePageUrl)
 
 			lectureFilePath := filepath.Join(sectionDir, lectureName)
-			fmt.Printf("\n lectureFilePath:: %s", lectureFilePath)
+
+			fmt.Printf("\n\n\t%s", lectureName)
 
 			if _, err := os.Stat(lectureFilePath); err == nil {
-				fmt.Printf("file exists; moving to next lecture...")
+				fmt.Printf("\n\tVideo file exists; moving to next lecture...")
 				break
 			}
 
@@ -188,7 +189,8 @@ func main() {
 			}
 
 			videoUrl, _ := lecturePage.Find("a.download").Attr("href")
-			fmt.Printf("videoUrl found: %s", videoUrl)
+
+			fmt.Printf("\n\tDownloading video ...")
 
 			out, err := os.Create(lectureFilePath)
 			if err != nil {
@@ -202,12 +204,11 @@ func main() {
 			}
 			defer resp.Body.Close()
 
-			n, err := io.Copy(out, resp.Body)
-			if err != nil {
+			_, ioErr := io.Copy(out, resp.Body)
+			if ioErr != nil {
 				log.Fatal(err)
 			}
 
-			fmt.Printf("\n value of n is:: %s", n)
 		}
 	}
 }
