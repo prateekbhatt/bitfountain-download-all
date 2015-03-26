@@ -201,12 +201,12 @@ func main() {
 
 			}
 
-            // check if video file already exists
+			// check if video file already exists
 			if fileStat, err := os.Stat(lectureFilePath); err == nil {
 				existingFileSizeOnDisk := fileStat.Size()
 				fmt.Printf("\n\t\texistingFileSizeOnDisk: %d", existingFileSizeOnDisk)
 
-                if existingFileSizeOnDisk == wistiaVideoSize {
+				if existingFileSizeOnDisk == wistiaVideoSize {
 					fmt.Println("\n\t\tFull video file exists; moving to next lecture...")
 					continue
 				} else {
