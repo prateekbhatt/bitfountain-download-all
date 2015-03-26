@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	// "reflect"
 	// "crypto/ssh/terminal"
 	// "github.com/tobyhede/go-underscore"
 )
@@ -173,11 +174,6 @@ func main() {
 
 			fmt.Printf("\n\n\t%s", lectureName)
 
-			if _, err := os.Stat(lectureFilePath); err == nil {
-				fmt.Printf("\n\tVideo file exists; moving to next lecture...")
-				continue
-			}
-
 			// Visit the lecture's url
 			respLecture, err := client.Get(lecturePageUrl)
 			if err != nil {
@@ -192,19 +188,41 @@ func main() {
 			// Get the Wistia download link on the lecture's page
 			videoUrl, _ := lecturePage.Find("a.download").Attr("href")
 
-			fmt.Printf("\n\tDownloading video ...")
+			var wistiaVideoSize int64
+
+			resp, err := client.Get(videoUrl)
+			if err != nil {
+				log.Fatal(err)
+			} else {
+				contentLength := resp.Header.Get("Content-Length")
+				wistiaVideoSize, _ = strconv.ParseInt(contentLength, 10, 64)
+				// contentType := resp.Header.Get("Content-Type")
+				fmt.Printf("\n\t\twistiaVideoSize: %d", wistiaVideoSize)
+
+			}
+
+            // check if video file already exists
+			if fileStat, err := os.Stat(lectureFilePath); err == nil {
+				existingFileSizeOnDisk := fileStat.Size()
+				fmt.Printf("\n\t\texistingFileSizeOnDisk: %d", existingFileSizeOnDisk)
+
+                if existingFileSizeOnDisk == wistiaVideoSize {
+					fmt.Println("\n\t\tFull video file exists; moving to next lecture...")
+					continue
+				} else {
+					fmt.Println("\n\t\tVideo file exists but not fully, will download again")
+				}
+			}
+
+			defer resp.Body.Close()
+
+			fmt.Println("\t\tDownloading video ...")
 
 			out, err := os.Create(lectureFilePath)
 			if err != nil {
 				log.Fatal(err)
 			}
 			defer out.Close()
-
-			resp, err := client.Get(videoUrl)
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer resp.Body.Close()
 
 			_, ioErr := io.Copy(out, resp.Body)
 			if ioErr != nil {
