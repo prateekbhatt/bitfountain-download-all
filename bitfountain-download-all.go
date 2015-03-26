@@ -175,7 +175,7 @@ func main() {
 
 			if _, err := os.Stat(lectureFilePath); err == nil {
 				fmt.Printf("\n\tVideo file exists; moving to next lecture...")
-				break
+				continue
 			}
 
 			respLecture, err := client.Get(lecturePageUrl)
