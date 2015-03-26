@@ -150,8 +150,15 @@ func main() {
 	for index, l := range sections {
 		sectionDir := filepath.Join(courseDir, getDashedName(l.name, index))
 
-		// create section directory
-		os.Mkdir(sectionDir, 0777)
+		// check if the section dir exists
+		_, err := os.Stat(sectionDir)
+		if err != nil {
+
+			// section dir does not exist
+			// create section directory
+			os.Mkdir(sectionDir, 0777)
+
+		}
 
 		for lIndex, v := range l.lectures {
 			fmt.Printf("\n%s :: %s", v.name, v.lectureId)
