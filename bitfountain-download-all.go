@@ -13,17 +13,18 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	// "crypto/ssh/terminal"
 	// "github.com/tobyhede/go-underscore"
 )
 
-func getDashedName(name string) string {
+func getDashedName(name string, index int) string {
 
 	trimmedName := strings.TrimSpace(name)
 	splitNameBySpace := strings.Split(trimmedName, " ")
 	dashedName := strings.Join(splitNameBySpace, "-")
-
+	dashedName = fmt.Sprint(strconv.Itoa(index), "-", dashedName)
 	return dashedName
 }
 
@@ -146,19 +147,17 @@ func main() {
 	// create course directory
 	os.Mkdir(courseDir, 0777)
 
-	for _, l := range sections {
-		// fmt.Printf("\n\nLesson: %s \n", l.name)
-
-		sectionDir := filepath.Join(courseDir, getDashedName(l.name))
+	for index, l := range sections {
+		sectionDir := filepath.Join(courseDir, getDashedName(l.name, index))
 
 		// create section directory
 		os.Mkdir(sectionDir, 0777)
 
-		for _, v := range l.lectures {
+		for lIndex, v := range l.lectures {
 			fmt.Printf("\n%s :: %s", v.name, v.lectureId)
 
 			lectureId := strings.TrimSpace(v.lectureId)
-			lectureName := fmt.Sprint(getDashedName(v.name), ".mp4")
+			lectureName := fmt.Sprint(getDashedName(v.name, lIndex), ".mp4")
 
 			lecturePageUrl := *courseUrlPtr + "/lectures/" + lectureId
 			fmt.Printf("\n lecturePageUrl:: %s", lecturePageUrl)
