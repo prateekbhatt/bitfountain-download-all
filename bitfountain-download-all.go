@@ -29,6 +29,10 @@ func getDashedName(name string, index int) string {
 	return dashedName
 }
 
+// func getLatestDownloadedVideo() int {
+
+// }
+
 func main() {
 
 	jar, _ := cookiejar.New(nil)
@@ -40,6 +44,9 @@ func main() {
 	emailPtr := flag.String("email", "", "Email of the user")
 	courseUrlPtr := flag.String("course", "", "URL of the course")
 	passwordPtr := flag.String("pass", "", "Password of the user")
+
+	// optionalStartLessonNoPtr := flag.String("no", "", "Lesson no, starts at 0")
+
 	flag.Parse()
 
 	if *emailPtr == "" {
@@ -64,7 +71,7 @@ func main() {
 
 	client := http.Client{Jar: jar}
 
-	_, err := client.PostForm(LOGIN_URL,
+	resp, err := client.PostForm(LOGIN_URL,
 		url.Values{
 			"user[school_id]": {SCHOOL_ID},
 			"user[email]":     {*emailPtr},
@@ -73,28 +80,41 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+    defer resp.Body.Close()
 
 	fmt.Println("Logged in. Fetching course sections ...")
 
-	// Get the Course page (contains the list of sections and lectures)
-	resp, err := client.Get(*courseUrlPtr)
+	currentDir, err := osext.ExecutableFolder()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	courseDir := filepath.Join(currentDir, path.Base(*courseUrlPtr))
+
 	// Every bitfountain course is split into multiple sections with each
 	// section having multiple lectures (videos)
 	type Lecture struct {
-		name      string
-		lectureId string
+		name     string
+		id       string
+		filePath string
+		url      string // bitfountain lecture page url
 	}
 
 	type Section struct {
-		name     string
-		lectures []Lecture
+		name       string
+		sectionDir string
+		lectures   []Lecture
 	}
 
-	doc, err := goquery.NewDocumentFromResponse(resp)
+    // Get the Course page (contains the list of sections and lectures)
+    respCourseDetails, err := client.Get(*courseUrlPtr)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer respCourseDetails.Body.Close()
+
+
+	doc, err := goquery.NewDocumentFromResponse(respCourseDetails)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -107,6 +127,9 @@ func main() {
 		// Get the name of the current section
 		name := s.Find(".section-title").Text()
 
+		name = getDashedName(name, i)
+		sectionDir := filepath.Join(courseDir, name)
+
 		newLectures := []Lecture{}
 
 		// Find all the lectures in the current section, and loop over them
@@ -118,64 +141,59 @@ func main() {
 			// Get the lecture id from the attribute. This will be used to
 			// construct the url of each lecture's page
 			lectureId, _ := l.Attr("data-lecture-id")
+
+			lectureId = strings.TrimSpace(lectureId)
+
+			lectureFileName := fmt.Sprint(getDashedName(lectureName, i), ".mp4")
+
+			// The video will be stored locally at the lectureFilePath
+			filePath := filepath.Join(sectionDir, lectureFileName)
+
+			// We will need to visit the lecturePageUrl, to get the Wistia
+			// video download link
+			url := *courseUrlPtr + "/lectures/" + lectureId
+
 			newLectures = append(newLectures, Lecture{
-				name:      lectureName,
-				lectureId: lectureId,
+				name:     lectureName,
+				id:       lectureId,
+				filePath: filePath,
+				url:      url,
 			})
 
 		})
 
 		newSection := Section{
-			name:     name,
-			lectures: newLectures,
+			name:       name,
+			sectionDir: sectionDir,
+			lectures:   newLectures,
 		}
 		sections = append(sections, newSection)
 
 	})
 
-	currentDir, err := osext.ExecutableFolder()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	courseDir := filepath.Join(currentDir, path.Base(*courseUrlPtr))
-
 	// create course directory
 	os.Mkdir(courseDir, 0777)
 
-	for index, l := range sections {
-
-		sectionDirName := getDashedName(l.name, index)
-		sectionDir := filepath.Join(courseDir, sectionDirName)
+	for _, section := range sections {
 
 		// check if the section dir exists
-		_, err := os.Stat(sectionDir)
+		_, err := os.Stat(section.sectionDir)
 		if err != nil {
 
 			// section dir does not exist
 			// create section directory
-			os.Mkdir(sectionDir, 0777)
+			os.Mkdir(section.sectionDir, 0777)
 
 		}
 
-		fmt.Printf("\n\n\n%s", sectionDirName)
+		fmt.Printf("\n\n\n%s", section.name)
 
-		for lIndex, v := range l.lectures {
+		for _, lecture := range section.lectures {
 
-			lectureId := strings.TrimSpace(v.lectureId)
-			lectureName := fmt.Sprint(getDashedName(v.name, lIndex), ".mp4")
-
-			// We will need to visit the lecturePageUrl, to get the Wistia
-			// video download link
-			lecturePageUrl := *courseUrlPtr + "/lectures/" + lectureId
-
-			// The video will be stored locally at the lectureFilePath
-			lectureFilePath := filepath.Join(sectionDir, lectureName)
-
-			fmt.Printf("\n\n\t%s", lectureName)
+			fmt.Printf("\n\n\t%s", lecture.name)
 
 			// Visit the lecture's url
-			respLecture, err := client.Get(lecturePageUrl)
+			respLecture, err := client.Get(lecture.url)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -202,7 +220,7 @@ func main() {
 			}
 
 			// check if video file already exists
-			if fileStat, err := os.Stat(lectureFilePath); err == nil {
+			if fileStat, err := os.Stat(lecture.filePath); err == nil {
 				existingFileSizeOnDisk := fileStat.Size()
 				fmt.Printf("\n\t\texistingFileSizeOnDisk: %d", existingFileSizeOnDisk)
 
@@ -218,7 +236,7 @@ func main() {
 
 			fmt.Println("\t\tDownloading video ...")
 
-			out, err := os.Create(lectureFilePath)
+			out, err := os.Create(lecture.filePath)
 			if err != nil {
 				log.Fatal(err)
 			}
