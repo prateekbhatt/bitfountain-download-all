@@ -201,6 +201,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
+			defer respLecture.Body.Close()
 
 			// Get the Wistia download link on the lecture's page
 			videoUrl, _ := lecturePage.Find("a.download").Attr("href")
