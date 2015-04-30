@@ -211,6 +211,13 @@ func main() {
 				log.Fatal(err)
 			}
 
+			// Some of the lectures only have assignments, no video
+			// We need to skip them
+			if parsedVideoUrl.Host == "" {
+				fmt.Printf("\n\t\tNo video found on this lecture's page. Moving on to the next lecture ...")
+				continue
+			}
+
 			// Sometimes the videoUrl does not have http / https as Scheme,
 			// We'll add http as the Scheme, because if its empty Go will
 			// throw an error
