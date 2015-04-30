@@ -80,7 +80,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-    defer resp.Body.Close()
+	defer resp.Body.Close()
 
 	fmt.Println("Logged in. Fetching course sections ...")
 
@@ -106,13 +106,12 @@ func main() {
 		lectures   []Lecture
 	}
 
-    // Get the Course page (contains the list of sections and lectures)
-    respCourseDetails, err := client.Get(*courseUrlPtr)
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer respCourseDetails.Body.Close()
-
+	// Get the Course page (contains the list of sections and lectures)
+	respCourseDetails, err := client.Get(*courseUrlPtr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer respCourseDetails.Body.Close()
 
 	doc, err := goquery.NewDocumentFromResponse(respCourseDetails)
 	if err != nil {
@@ -205,6 +204,20 @@ func main() {
 
 			// Get the Wistia download link on the lecture's page
 			videoUrl, _ := lecturePage.Find("a.download").Attr("href")
+
+			// Parse the URL and ensure there are no errors.
+			parsedVideoUrl, err := url.Parse(videoUrl)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			// Sometimes the videoUrl does not have http / https as Scheme,
+			// We'll add http as the Scheme, because if its empty Go will
+			// throw an error
+			if parsedVideoUrl.Scheme != "http" || parsedVideoUrl.Scheme != "https" {
+				parsedVideoUrl.Scheme = "http"
+				videoUrl = parsedVideoUrl.String()
+			}
 
 			var wistiaVideoSize int64
 
