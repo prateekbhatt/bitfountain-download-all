@@ -21,6 +21,10 @@ e.g.
 ./bitfountain-download-all -email=john@example.com -pass=mypass1234 -course=http://bitfountain.io/courses/complete-ios8
 ```
 
+You can also pass the optional parameter `-section` to specify a starting section for the download. This is zero based, e.g `-section 3` on the `The Bitfountain iOS 7 Immersive` course would be `Challenge 1: Age of Laika`. By default it will download the whole course (starting at section 0).
+
 ## Contributions
+
+Othyn
 
 Please create issues and/or submit PRs when you find bugs.
