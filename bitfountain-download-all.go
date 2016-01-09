@@ -52,7 +52,7 @@ func main() {
 
 	jar, _ := cookiejar.New(nil)
 
-	LOGIN_URL := "https://sso.usefedora.com/secure/24/users/sign_in"
+	LOGIN_URL := "https://sso.teachable.com/secure/24/users/sign_in?reset_purchase_session=1"
 	SCHOOL_ID := "24" // id of bitfountain on usefedora.com
 
 	// commandline inputs for email, password, and course url
@@ -91,11 +91,27 @@ func main() {
 
 	client := http.Client{Jar: jar}
 
+	respLogin, err := client.Get(LOGIN_URL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	loginPage, err := goquery.NewDocumentFromResponse(respLogin)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer respLogin.Body.Close()
+
+	token, _ := loginPage.Find("input[name='authenticity_token']").Attr("value")
+
 	resp, err := client.PostForm(LOGIN_URL,
 		url.Values{
+			"utf8": {"&#x2713;"},
+			"authenticity_token": {token},
 			"user[school_id]": {SCHOOL_ID},
 			"user[email]":     {*emailPtr},
 			"user[password]":  {*passwordPtr},
+			"commit": {"Log in"},
 		})
 	if err != nil {
 		log.Fatal(err)
@@ -163,9 +179,9 @@ func main() {
 
 				// Get the lecture id from the attribute. This will be used to
 				// construct the url of each lecture's page
-				lectureId, _ := l.Attr("data-lecture-id")
-
-				lectureId = strings.TrimSpace(lectureId)
+				item, _ := l.Find(".item").Attr("href")
+				parts := strings.Split(item, "/")
+				lectureId := strings.TrimSpace(parts[len(parts)-1])
 
 				lectureFileName := fmt.Sprint(getDashedName(lectureName, i), ".mp4")
 
